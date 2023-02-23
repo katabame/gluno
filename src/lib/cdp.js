@@ -2,7 +2,7 @@ import { get } from "node:http";
 import { log } from "./logger.js";
 
 let WebSocket;
-const logCDP = process.argv.includes("--cdp-logging");
+const logCDP = Deno.args.includes("--cdp-logging");
 
 export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
   const messageCallbacks = [], onReply = {};
@@ -63,7 +63,7 @@ export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
       new Promise((resolve) => {
         const attempt = async () => {
           try {
-            process.stdout.write(".");
+            await Deno.stdout.write(new TextEncoder().encode("."));
             resolve(await func());
           } catch (_e) { // fail, wait 100ms and try again
             await new Promise((res) => setTimeout(res, 200));

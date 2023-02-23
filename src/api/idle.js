@@ -4,7 +4,7 @@ import { log } from "../lib/logger.js";
 const killProcesses = (pids) =>
   new Promise((resolve) =>
     exec(
-      process.platform !== "win32"
+      Deno.build.os !== "windows"
         ? `kill -9 ${pids.join(" ")}`
         : `taskkill /F ${pids.map((x) => `/PID ${x}`).join(" ")}`,
       (_e, out) => resolve(out),
@@ -56,7 +56,7 @@ export default async (CDP, { browserType, closeHandlers }) => {
   let wakeUrl, hibernating = false, frozen = false;
   const hibernate = async () => { // hibernate - crashing chromium internally to save max memory. users will see a crash/gone wrong page but we hopefully "reload" quick enough once visible again for not much notice.
     if (hibernating) return;
-    // if (process.platform !== 'win32') return sleep(); // sleep instead - full hibernation is windows only for now due to needing to do native things
+    // if (Deno.build.os !== 'windows') return sleep(); // sleep instead - full hibernation is windows only for now due to needing to do native things
 
     hibernating = true;
 
@@ -135,7 +135,7 @@ export default async (CDP, { browserType, closeHandlers }) => {
 
   const { windowId } = await CDP.send("Browser.getWindowForTarget");
 
-  let autoEnabled = process.argv.includes("--force-auto-idle"),
+  let autoEnabled = Deno.args.includes("--force-auto-idle"),
     autoOptions = {
       timeMinimizedToHibernate: 5,
     };

@@ -46,12 +46,12 @@ export default (CDP, evaluate, { browserType, dataPath }) => {
 
       const unhook = CDP.on(
         "Page.compilationCacheProduced",
-        ({ params: { url, data } }) => {
+        async ({ params: { url, data } }) => {
           produced.push({ url, data });
 
-          process.stdout.write(
+          await Deno.stdout.write(new TextEncoder().encode(
             `v8Cache: caching... (${produced.length}/${urls.length})\r`,
-          );
+          ));
 
           if (produced.length >= urls.length) {
             done = true;
@@ -82,7 +82,7 @@ export default (CDP, evaluate, { browserType, dataPath }) => {
         await CDP.send("Page.reload");
       }
 
-      process.stdout.write(`v8Cache: starting cache...\r`);
+      await Deno.stdout.write(new TextEncoder().encode(`v8Cache: starting cache...\r`));
     };
 
     const cache = await new Promise((resolve) => {

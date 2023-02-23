@@ -9,17 +9,17 @@ import Firefox from "./browser/firefox.js";
 import * as ExtensionsAPI from "./extensions.js";
 import LocalHTTP from "./lib/local/http.js";
 
-process.versions.gluon = "0.13.3";
+export const GluonVersion = "0.13.3";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const browserPaths = ({
-  win32: process.platform === "win32" && { // windows paths are automatically prepended with program files, program files (x86), and local appdata if a string, see below
+  windows: Deno.build.os === "windows" && { // windows paths are automatically prepended with program files, program files (x86), and local appdata if a string, see below
     chrome: [
       join("Google", "Chrome", "Application", "chrome.exe"),
       join(
-        process.env.USERPROFILE,
+        Deno.env.get("USERPROFILE"),
         "scoop",
         "apps",
         "googlechrome",
@@ -34,7 +34,7 @@ const browserPaths = ({
     chromium: [
       join("Chromium", "Application", "chrome.exe"),
       join(
-        process.env.USERPROFILE,
+        Deno.env.get("USERPROFILE"),
         "scoop",
         "apps",
         "chromium",
@@ -55,7 +55,7 @@ const browserPaths = ({
     firefox: [
       join("Mozilla Firefox", "firefox.exe"),
       join(
-        process.env.USERPROFILE,
+        Deno.env.get("USERPROFILE"),
         "scoop",
         "apps",
         "firefox",
@@ -160,17 +160,17 @@ const browserPaths = ({
     librewolf: "/Applications/LibreWolf.app/Contents/MacOS/librewolf",
     waterfox: "/Applications/Waterfox.app/Contents/MacOS/waterfox",
   },
-})[process.platform];
+})[Deno.build.os];
 
-if (process.platform === "win32") { // windows: automatically generate env-based paths if not arrays
+if (Deno.build.os === "windows") { // windows: automatically generate env-based paths if not arrays
   for (const browser in browserPaths) {
     const isArray = Array.isArray(browserPaths[browser]);
     const basePath = isArray ? browserPaths[browser][0] : browserPaths[browser];
 
     browserPaths[browser] = [
-      join(process.env.PROGRAMFILES, basePath),
-      join(process.env.LOCALAPPDATA, basePath),
-      join(process.env["PROGRAMFILES(x86)"], basePath),
+      join(Deno.env.get("PROGRAMFILES"), basePath),
+      join(Deno.env.get("LOCALAPPDATA"), basePath),
+      join(Deno.env.get("PROGRAMFILES(x86)"), basePath),
       ...(isArray ? browserPaths[browser].slice(1) : []),
     ];
   }
@@ -181,7 +181,7 @@ const getBinariesInPath = async () => {
   if (_binariesInPath) return _binariesInPath;
 
   return _binariesInPath = (await Promise.all(
-    process.env.PATH
+    Deno.env.get("PATH")
       .replaceAll('"', "")
       .split(delimiter)
       .filter(Boolean)
@@ -217,13 +217,13 @@ const findBrowserPath = async (forceBrowser, forceEngine) => {
 
   for (const x in browserPaths) {
     if (
-      process.argv.includes("--" + x) ||
-      process.argv.includes("--" + x.split("_")[0])
+      Deno.args.includes("--" + x) ||
+      Deno.args.includes("--" + x.split("_")[0])
     ) return [await getBrowserPath(x), x];
   }
 
-  if (process.argv.some((x) => x.startsWith("--browser="))) {
-    const given = process.argv.find((x) => x.startsWith("--browser="));
+  if (Deno.args.some((x) => x.startsWith("--browser="))) {
+    const given = Deno.args.find((x) => x.startsWith("--browser="));
     const split = given.slice(given.indexOf("=") + 1).split(",");
     const name = split[0];
     const path = split.slice(1).join(",");
@@ -249,9 +249,9 @@ const getFriendlyName = (whichBrowser) =>
   whichBrowser.slice(1).replace(/[a-z]_[a-z]/g, (_) =>
     _[0] + " " + _[2].toUpperCase());
 
-const ranJsDir = !process.argv[1]
+const ranJsDir = !Deno.args[1]
   ? __dirname
-  : (extname(process.argv[1]) ? dirname(process.argv[1]) : process.argv[1]);
+  : (extname(Deno.args[1]) ? dirname(Deno.args[1]) : Deno.args[1]);
 const getDataPath = (browser) => join(ranJsDir, "gluon_data", browser);
 
 const getBrowserType = (name) => { // todo: not need this

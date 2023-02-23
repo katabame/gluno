@@ -1,6 +1,7 @@
 // deno-lint-ignore-file no-constant-condition
 import { log } from "./logger.js";
-const logIPC = process.argv.includes("--ipc-logging");
+import { GluonVersion } from "../index.js";
+const logIPC = Deno.args.includes("--ipc-logging");
 
 export default (
   { browserName, browserInfo, browserType },
@@ -11,22 +12,22 @@ if (window.Gluon) return;
 let onIPCReply = {}, ipcListeners = {};
 window.Gluon = {
   versions: {
-    gluon: '${process.versions.gluon}',
+    gluon: '${GluonVersion}',
     builder: '${
     "GLUGUN_VERSION" === "G\LUGUN_VERSION" ? "nothing" : "Glugun GLUGUN_VERSION"
   }',
-    node: '${process.versions.node}',
+    deno: '${Deno.version.deno}',
     browser: '${browserInfo.product.split("/")[1]}',
     browserType: '${browserType}',
     product: '${browserName}',
 
     js: {
-      node: '${process.versions.v8}',
+      deno: '${Deno.version.v8}',
       browser: '${browserInfo.jsVersion}'
     },
 
     embedded: {
-      node: ${"EMBEDDED_NODE" === "true" ? "true" : "false"},
+      deno: ${"EMBEDDED_DENO" === "true" ? "true" : "false"},
       browser: false
     }
   },

@@ -15,7 +15,7 @@ const acquireTarget = async (CDP, filter = () => true) => {
   log("acquiring target...");
 
   while (!target) {
-    process.stdout.write(".");
+    await Deno.stdout.write(new TextEncoder().encode("."));
     target =
       (await CDP.sendMessage("Target.getTargets")).targetInfos.filter((x) =>
         x.type === "page"
