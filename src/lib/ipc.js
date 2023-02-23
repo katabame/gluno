@@ -1,16 +1,22 @@
-import { log } from './logger.js';
-const logIPC = process.argv.includes('--ipc-logging');
+// deno-lint-ignore-file no-constant-condition
+import { log } from "./logger.js";
+const logIPC = process.argv.includes("--ipc-logging");
 
-export default ({ browserName, browserInfo, browserType }, { evalInWindow, evalOnNewDocument }) => {
+export default (
+  { browserName, browserInfo, browserType },
+  { evalInWindow, evalOnNewDocument },
+) => {
   const injection = `(() => {
 if (window.Gluon) return;
 let onIPCReply = {}, ipcListeners = {};
 window.Gluon = {
   versions: {
     gluon: '${process.versions.gluon}',
-    builder: '${'GLUGUN_VERSION' === 'G\LUGUN_VERSION' ? 'nothing' : 'Glugun GLUGUN_VERSION'}',
+    builder: '${
+    "GLUGUN_VERSION" === "G\LUGUN_VERSION" ? "nothing" : "Glugun GLUGUN_VERSION"
+  }',
     node: '${process.versions.node}',
-    browser: '${browserInfo.product.split('/')[1]}',
+    browser: '${browserInfo.product.split("/")[1]}',
     browserType: '${browserType}',
     product: '${browserName}',
 
@@ -20,7 +26,7 @@ window.Gluon = {
     },
 
     embedded: {
-      node: ${'EMBEDDED_NODE' === 'true' ? 'true' : 'false'},
+      node: ${"EMBEDDED_NODE" === "true" ? "true" : "false"},
       browser: false
     }
   },
@@ -131,30 +137,32 @@ delete window._gluonSend;
   evalInWindow(injection);
   evalOnNewDocument(injection);
 
-  let onIPCReply = {}, ipcListeners = {};
+  const onIPCReply = {}, ipcListeners = {};
   const sendToWindow = async (type, data, id = undefined) => {
-    if (logIPC) log('IPC: send', { type, data, id });
+    if (logIPC) log("IPC: send", { type, data, id });
 
     const isReply = !!id;
-    id = id ?? Math.random().toString().split('.')[1];
+    id = id ?? Math.random().toString().split(".")[1];
 
-    evalInWindow(`window.Gluon.ipc._receive(${JSON.stringify({
-      id,
-      type,
-      data
-    })})`);
+    evalInWindow(`window.Gluon.ipc._receive(${
+      JSON.stringify({
+        id,
+        type,
+        data,
+      })
+    })`);
 
     if (isReply) return; // we are replying, don't expect reply back
 
-    const reply = await new Promise(res => {
-      onIPCReply[id] = msg => res(msg);
+    const reply = await new Promise((res) => {
+      onIPCReply[id] = (msg) => res(msg);
     });
 
     return reply.data;
   };
 
   const onWindowMessage = async ({ id, type, data }) => {
-    if (logIPC) log('IPC: recv', { type, data, id });
+    if (logIPC) log("IPC: recv", { type, data, id });
 
     if (onIPCReply[id]) {
       onIPCReply[id]({ type, data });
@@ -170,10 +178,10 @@ delete window._gluonSend;
         if (!reply) reply = ret; // use first returned value as reply
       }
 
-      if (reply) return sendToWindow('reply', reply, id); // reply with wanted reply
+      if (reply) return sendToWindow("reply", reply, id); // reply with wanted reply
     }
 
-    sendToWindow('pong', null, id); // send simple pong to confirm
+    sendToWindow("pong", null, id); // send simple pong to confirm
   };
 
   let API = {
@@ -193,19 +201,23 @@ delete window._gluonSend;
   };
 
   // Expose API
-  const makeExposeKey = key => 'exposed ' + key;
+  const makeExposeKey = (key) => "exposed " + key;
 
   const expose = (key, func) => {
-    if (typeof func !== 'function') return new Error('Invalid arguments (expected key and function)');
-    if (logIPC) log('IPC: expose', key);
+    if (typeof func !== "function") {
+      return new Error("Invalid arguments (expected key and function)");
+    }
+    if (logIPC) log("IPC: expose", key);
 
     const exposeKey = makeExposeKey(key);
 
-    API.on(exposeKey, args => func(...args)); // handle IPC events
-    evalInWindow(`Gluon.ipc['${key}'] = (...args) => Gluon.ipc.send('${exposeKey}', args)`); // add wrapper func to window
+    API.on(exposeKey, (args) => func(...args)); // handle IPC events
+    evalInWindow(
+      `Gluon.ipc['${key}'] = (...args) => Gluon.ipc.send('${exposeKey}', args)`,
+    ); // add wrapper func to window
   };
 
-  const unexpose = key => {
+  const unexpose = (key) => {
     const exposeKey = makeExposeKey(key);
 
     const existed = API.removeListener(exposeKey); // returns false if type isn't registered/active
@@ -223,16 +235,16 @@ delete window._gluonSend;
 
     if (args.length === 2) return expose(args[0], args[1]);
 
-    return new Error('Invalid arguments (expected object or key and function)');
+    return new Error("Invalid arguments (expected object or key and function)");
   };
 
   API.unexpose = unexpose;
 
   const _store = {};
   const updateWeb = (key, value) => { // update web with a key/value change
-    if (logIPC) log('IPC: store write (backend)', key, value);
+    if (logIPC) log("IPC: store write (backend)", key, value);
 
-    API.send('backend store change', { key, value });
+    API.send("backend store change", { key, value });
   };
 
   API.store = new Proxy({
@@ -247,7 +259,7 @@ delete window._gluonSend;
       return value;
     },
 
-    keys: () => Object.keys(_store)
+    keys: () => Object.keys(_store),
   }, {
     get(_obj, key) {
       return _store[key];
@@ -265,14 +277,14 @@ delete window._gluonSend;
 
       updateWeb(key, undefined);
       return true;
-    }
+    },
   });
 
-  API.on('web store change', ({ key, value }) => {
-    if (logIPC) log('IPC: store write (web)', key, value);
+  API.on("web store change", ({ key, value }) => {
+    if (logIPC) log("IPC: store write (web)", key, value);
 
     if (value === undefined) delete _store[key];
-      else _store[key] = value;
+    else _store[key] = value;
   });
 
   API = new Proxy(API, { // setter and deleter API
@@ -284,12 +296,12 @@ delete window._gluonSend;
     deleteProperty(_obj, key) {
       unexpose(key);
       return true;
-    }
+    },
   });
 
   return [
     onWindowMessage,
     () => evalInWindow(injection),
-    API
+    API,
   ];
 };

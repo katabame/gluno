@@ -1,4 +1,5 @@
-/// <reference types="node" />
+// deno-lint-ignore-file
+import { Buffer } from "node:buffer";
 declare module "@gluon-framework/gluon";
 
 type V8CacheBuildOptions = {
@@ -167,7 +168,7 @@ type PageApi = {
    */
   eval(
     /** String or function to evaluate. */
-    expression: string|Function
+    expression: string | Function
   ): Promise<any>,
 
   /** Promise for waiting until the page has loaded. */
@@ -485,15 +486,15 @@ type Window = {
 
 /** A browser that Gluon supports. */
 type Browser =
-  'chrome'|'chrome_beta'|'chrome_dev'|'chrome_canary'|
-  'chromium'|'chromium_snapshot'|
-  'edge'|'edge_beta'|'edge_dev'|'edge_canary'|
-  'firefox'|'firefox_nightly'|
-  'thorium'|
+  'chrome' | 'chrome_beta' | 'chrome_dev' | 'chrome_canary' |
+  'chromium' | 'chromium_snapshot' |
+  'edge' | 'edge_beta' | 'edge_dev' | 'edge_canary' |
+  'firefox' | 'firefox_nightly' |
+  'thorium' |
   'librewolf';
 
 /** A browser engine that Gluon supports. */
-type BrowserEngine = 'chromium'|'firefox';
+type BrowserEngine = 'chromium' | 'firefox';
 
 
 /** Additional options for opening */

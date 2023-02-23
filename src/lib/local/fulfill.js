@@ -1,11 +1,11 @@
-import { basename, dirname, extname, join } from 'path';
-import { readFile } from 'fs/promises';
+import { basename, dirname, extname, join } from "node:path";
+import { readFile } from "node:fs/promises";
 
-import mimeType from '../mimeType.js';
+import mimeType from "../mimeType.js";
 
 const generatePath = (pathname, indexFile) => {
-  if (pathname === '/') return indexFile;
-  if (extname(pathname) === '') return pathname + '.html';
+  if (pathname === "/") return indexFile;
+  if (extname(pathname) === "") return pathname + ".html";
 
   return pathname;
 };
@@ -14,9 +14,9 @@ export default (givenPath, csp) => {
   if (!csp) csp = undefined;
 
   const basePath = extname(givenPath) ? dirname(givenPath) : givenPath;
-  const indexFile = extname(givenPath) ? basename(givenPath) : 'index.html';
+  const indexFile = extname(givenPath) ? basename(givenPath) : "index.html";
 
-  return async url => {
+  return async (url) => {
     url = new URL(url);
 
     const path = join(basePath, generatePath(url.pathname, indexFile));
@@ -24,23 +24,25 @@ export default (givenPath, csp) => {
 
     let error = false;
 
-    const body = await readFile(path, 'utf8').catch(() => false);
+    const body = await readFile(path, "utf8").catch(() => false);
     if (!body) error = 404;
 
-    if (error) return {
-      status: 404,
-      error: true,
-      body: '',
-      headers: {},
-    };
+    if (error) {
+      return {
+        status: 404,
+        error: true,
+        body: "",
+        headers: {},
+      };
+    }
 
     return {
       status: 200,
       body,
       headers: {
-        'Content-Type': mimeType(ext),
-        'Content-Security-Policy': csp
-      }
+        "Content-Type": mimeType(ext),
+        "Content-Security-Policy": csp,
+      },
     };
   };
 };

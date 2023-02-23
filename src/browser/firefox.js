@@ -1,41 +1,64 @@
-import { mkdir, writeFile, copyFile, access } from 'fs/promises';
-import { join, basename } from 'path';
+import { access, copyFile, mkdir, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 
-import StartBrowser from '../launcher/start.js';
+import StartBrowser from "../launcher/start.js";
 
-const exists = path => access(path).then(() => true).catch(() => false);
+const exists = (path) => access(path).then(() => true).catch(() => false);
 
-export default async ({ browserPath, dataPath }, { url, windowSize, allowHTTP, extensions }, extra) => {
+export default async (
+  { browserPath, dataPath },
+  { url, windowSize, allowHTTP, extensions },
+  extra,
+) => {
   await mkdir(dataPath, { recursive: true });
-  await writeFile(join(dataPath, 'user.js'), `
+  await writeFile(
+    join(dataPath, "user.js"),
+    `
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 user_pref('devtools.chrome.enabled', true);
 user_pref('devtools.debugger.prompt-connection', false);
 user_pref('devtools.debugger.remote-enabled', true);
 user_pref('toolkit.telemetry.reportingpolicy.firstRun', false);
 user_pref('browser.shell.checkDefaultBrowser', false);
-${!windowSize ? '' : `user_pref('privacy.window.maxInnerWidth', ${windowSize[0]});
-user_pref('privacy.window.maxInnerHeight', ${windowSize[1]});`}
+${
+      !windowSize
+        ? ""
+        : `user_pref('privacy.window.maxInnerWidth', ${windowSize[0]});
+user_pref('privacy.window.maxInnerHeight', ${windowSize[1]});`
+    }
 user_pref('privacy.resistFingerprinting', true);
 user_pref('fission.bfcacheInParent', false);
 user_pref('fission.webContentIsolationStrategy', 0);
 user_pref('ui.key.menuAccessKeyFocuses', false);
 user_pref('extensions.autoDisableScopes', 0);
 user_pref('media.autoplay.blocking_policy', 0);
-${process.platform === 'darwin' ? `user_pref('browser.tabs.inTitlebar', 0);` : `` }
+${
+      process.platform === "darwin"
+        ? `user_pref('browser.tabs.inTitlebar', 0);`
+        : ``
+    }
 
-user_pref('security.mixed_content.block_active_content', ${![true, 'mixed'].includes(allowHTTP) ? 'true' : 'false'});
-user_pref('security.mixed_content.block_display_content', ${![true, 'mixed'].includes(allowHTTP) ? 'true' : 'false'});
-user_pref('security.mixed_content.block_object_subrequest', ${![true, 'mixed'].includes(allowHTTP) ? 'true' : 'false'});
+user_pref('security.mixed_content.block_active_content', ${
+      ![true, "mixed"].includes(allowHTTP) ? "true" : "false"
+    });
+user_pref('security.mixed_content.block_display_content', ${
+      ![true, "mixed"].includes(allowHTTP) ? "true" : "false"
+    });
+user_pref('security.mixed_content.block_object_subrequest', ${
+      ![true, "mixed"].includes(allowHTTP) ? "true" : "false"
+    });
 user_pref('security.mixed_content.upgrade_display_content', true);
-`);
+`,
+  );
 
-// user_pref('privacy.resistFingerprinting', false);
-/* user_pref('privacy.window.maxInnerWidth', ${windowSize[0]});
+  // user_pref('privacy.resistFingerprinting', false);
+  /* user_pref('privacy.window.maxInnerWidth', ${windowSize[0]});
 user_pref('privacy.window.maxInnerHeight', ${windowSize[1]}); */
 
-  await mkdir(join(dataPath, 'chrome'), { recursive: true });
-  await writeFile(join(dataPath, 'chrome', 'userChrome.css'), `
+  await mkdir(join(dataPath, "chrome"), { recursive: true });
+  await writeFile(
+    join(dataPath, "chrome", "userChrome.css"),
+    `
 .titlebar-spacer, #firefox-view-button, #alltabs-button, #tabbrowser-arrowscrollbox-periphery, .tab-close-button {
   display: none;
 }
@@ -79,19 +102,27 @@ html:not([tabsintitlebar="true"]) #tabbrowser-tabs,
 html:not([tabsintitlebar="true"]) .tab-icon-image {
   display: none !important;
 }
-`);
+`,
+  );
 
-  await mkdir(join(dataPath, 'extensions'), { recursive: true });
+  await mkdir(join(dataPath, "extensions"), { recursive: true });
   for (const ext of (await Promise.all(extensions)).flat()) {
-    const installPath = join(dataPath, 'extensions', basename(ext));
+    const installPath = join(dataPath, "extensions", basename(ext));
     if (!await exists(installPath)) await copyFile(ext, installPath);
   }
 
-  return await StartBrowser(browserPath, [
-    ...(!windowSize ? [] : [ `-window-size`, windowSize.join(',') ]),
-    `-profile`, dataPath,
-    `-new-window`, url,
-    `-new-instance`,
-    `-no-remote`,
-  ], 'websocket', extra);
+  return await StartBrowser(
+    browserPath,
+    [
+      ...(!windowSize ? [] : [`-window-size`, windowSize.join(",")]),
+      `-profile`,
+      dataPath,
+      `-new-window`,
+      url,
+      `-new-instance`,
+      `-no-remote`,
+    ],
+    "websocket",
+    extra,
+  );
 };

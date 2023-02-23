@@ -1,17 +1,17 @@
-import { get } from 'http';
-import { log } from './logger.js';
+import { get } from "node:http";
+import { log } from "./logger.js";
 
 let WebSocket;
-const logCDP = process.argv.includes('--cdp-logging');
+const logCDP = process.argv.includes("--cdp-logging");
 
 export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
-  let messageCallbacks = [], onReply = {};
-  const onMessage = msg => {
+  const messageCallbacks = [], onReply = {};
+  const onMessage = (msg) => {
     if (closed) return; // closed, ignore
 
     msg = JSON.parse(msg);
 
-    if (logCDP) log('received', msg);
+    if (logCDP) log("received", msg);
     if (onReply[msg.id]) {
       onReply[msg.id](msg);
       delete onReply[msg.id];
@@ -27,28 +27,28 @@ export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
 
   let msgId = 0;
   const sendMessage = async (method, params = {}, sessionId = undefined) => {
-    if (closed) return new Error('CDP connection closed');
+    if (closed) return new Error("CDP connection closed");
 
     const id = msgId++;
 
     const msg = {
       id,
       method,
-      params
+      params,
     };
 
     if (sessionId) msg.sessionId = sessionId;
 
     _send(JSON.stringify(msg));
 
-    if (logCDP) log('sent', msg);
+    if (logCDP) log("sent", msg);
 
-    const reply = await new Promise(res => {
-      onReply[id] = msg => res(msg);
+    const reply = await new Promise((res) => {
+      onReply[id] = (msg) => res(msg);
     });
 
     if (reply.error) {
-      log('warn: CDP reply error:', reply.error);
+      log("warn: CDP reply error:", reply.error);
       return new Error(reply.error.message);
     }
 
@@ -57,50 +57,55 @@ export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
 
   if (port) {
     // begin importing ws in the background if not already
-    if (!WebSocket) WebSocket = import('ws');
+    if (!WebSocket) WebSocket = import("npm:ws");
 
-    const continualTrying = func => new Promise(resolve => {
-      const attempt = async () => {
-        try {
-          process.stdout.write('.');
-          resolve(await func());
-        } catch (e) { // fail, wait 100ms and try again
-          await new Promise(res => setTimeout(res, 200));
-          await attempt();
-        }
-      };
+    const continualTrying = (func) =>
+      new Promise((resolve) => {
+        const attempt = async () => {
+          try {
+            process.stdout.write(".");
+            resolve(await func());
+          } catch (_e) { // fail, wait 100ms and try again
+            await new Promise((res) => setTimeout(res, 200));
+            await attempt();
+          }
+        };
 
-      attempt();
-    });
-
-    const wsUrl = await continualTrying(() => new Promise((resolve, reject) => get(`http://127.0.0.1:${port}/json/version`, res => {
-      let body = '';
-      res.on('data', chunk => body += chunk.toString());
-      res.on('end', () => {
-        try {
-          const info = JSON.parse(body);
-          resolve(info.webSocketDebuggerUrl);
-        } catch {
-          reject();
-        }
+        attempt();
       });
-    }).on('error', reject)));
 
-    log('got main process target websocket url:', wsUrl);
+    const wsUrl = await continualTrying(() =>
+      new Promise((resolve, reject) =>
+        get(`http://127.0.0.1:${port}/json/version`, (res) => {
+          let body = "";
+          res.on("data", (chunk) => body += chunk.toString());
+          res.on("end", () => {
+            try {
+              const info = JSON.parse(body);
+              resolve(info.webSocketDebuggerUrl);
+            } catch {
+              reject();
+            }
+          });
+        }).on("error", reject)
+      )
+    );
+
+    log("got main process target websocket url:", wsUrl);
 
     const ws = new (await WebSocket).default(wsUrl);
-    await new Promise(resolve => ws.on('open', resolve));
+    await new Promise((resolve) => ws.on("open", resolve));
 
-    ws.on('message', data => onMessage(data));
+    ws.on("message", (data) => onMessage(data));
 
-    _send = data => !closed && ws.send(data);
+    _send = (data) => !closed && ws.send(data);
     _close = () => ws.close();
   } else {
-    let pending = '';
-    pipeRead.on('data', buf => {
+    let pending = "";
+    pipeRead.on("data", (buf) => {
       if (closed) return; // closed, ignore
 
-      let end = buf.indexOf('\0'); // messages are null separated
+      let end = buf.indexOf("\0"); // messages are null separated
 
       if (end === -1) { // no complete message yet
         pending += buf.toString();
@@ -113,21 +118,21 @@ export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
         onMessage(message);
 
         start = end + 1; // find next ending
-        end = buf.indexOf('\0', start);
-        pending = '';
+        end = buf.indexOf("\0", start);
+        pending = "";
       }
 
       pending = buf.toString(undefined, start); // update pending with current pending
     });
 
-    pipeRead.on('close', () => log('pipe read closed'));
-    pipeWrite.on('error', () => {}); // ignore write error, likely just closed
+    pipeRead.on("close", () => log("pipe read closed"));
+    pipeWrite.on("error", () => {}); // ignore write error, likely just closed
 
-    _send = data => {
-      if (closed) return new Error('CDP connection closed');
+    _send = (data) => {
+      if (closed) return new Error("CDP connection closed");
 
       pipeWrite.write(data);
-      pipeWrite.write('\0');
+      pipeWrite.write("\0");
     };
 
     _close = () => {};
@@ -148,6 +153,6 @@ export default async ({ pipe: { pipeWrite, pipeRead } = {}, port }) => {
     close: () => {
       closed = true;
       _close();
-    }
+    },
   };
 };
